@@ -1,0 +1,8 @@
+ollama
+chromadb
+streamlit
+pillow
+pandas
+numpy
+python-dotenv
+openai
