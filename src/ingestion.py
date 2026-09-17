@@ -10,15 +10,16 @@ from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 from langchain_chroma import Chroma
 from src.embeddings import product_json_to_text, NVIDIA_API_KEY  # your existing flattener
 
+# CHANGED from "nvidia/llama-nemotron-embed-vl-1b-v2" -> "nvidia/nemotron-3-embed-1b".
+# The VL model is built for multimodal PAGE/DOCUMENT retrieval (PDFs, scanned
+# images), not generic short product text -- LangChain's NVIDIAEmbeddings
+# doesn't recognize its type properly ("type is unknown and inference may
+# fail" warning), which made real requests hang until timeout instead of
+# failing fast. nemotron-3-embed-1b is a plain text retrieval model, already
+# confirmed working via the raw openai client in embeddings.py.
 embeddings = NVIDIAEmbeddings(
-    model="nvidia/llama-nemotron-embed-vl-1b-v2",
+    model="nvidia/nemotron-3-embed-1b",
     api_key=NVIDIA_API_KEY,
-    # CHANGED from "NONE" -> "END": Flipkart descriptions occasionally run
-    # 5000+ characters (~1300 tokens). Nemotron's 32k context isn't actually
-    # exceeded, but truncate="NONE" throws a hard error on ANY oversized
-    # input rather than gracefully cutting it -- one bad row would kill an
-    # entire ingest_products() batch. "END" makes NVIDIA auto-truncate
-    # instead, so ingestion never crashes on a single long description.
     truncate="END",
 )
 
@@ -53,7 +54,6 @@ def ingest_products(products: List[Dict[str, Any]]) -> int:
             "category": p.get("category", ""),
             "subcategory": p.get("subcategory", ""),
             "model": p.get("model", ""),
-            "condition": p.get("condition", ""),
             "price": float(p.get("price", 0) or 0),
             "rating": float(p.get("rating", 0) or 0),
             "image_url": p.get("image_url", ""),
