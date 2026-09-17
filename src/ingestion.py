@@ -13,7 +13,13 @@ from src.embeddings import product_json_to_text, NVIDIA_API_KEY  # your existing
 embeddings = NVIDIAEmbeddings(
     model="nvidia/llama-nemotron-embed-vl-1b-v2",
     api_key=NVIDIA_API_KEY,
-    truncate="NONE",
+    # CHANGED from "NONE" -> "END": Flipkart descriptions occasionally run
+    # 5000+ characters (~1300 tokens). Nemotron's 32k context isn't actually
+    # exceeded, but truncate="NONE" throws a hard error on ANY oversized
+    # input rather than gracefully cutting it -- one bad row would kill an
+    # entire ingest_products() batch. "END" makes NVIDIA auto-truncate
+    # instead, so ingestion never crashes on a single long description.
+    truncate="END",
 )
 
 vectorstore = Chroma(
@@ -38,10 +44,18 @@ def ingest_products(products: List[Dict[str, Any]]) -> int:
         texts.append(product_json_to_text(p))
         ids.append(str(p["id"]))
         metadatas.append({
+            # ADDED: product_name, subcategory, model, condition -- these
+            # were missing before, meaning the UI had no cheap way to show
+            # "what product is this result" without re-parsing the full
+            # flattened text string.
+            "product_name": p.get("product_name", ""),
             "brand": p.get("brand", ""),
             "category": p.get("category", ""),
-            "price": float(p.get("price", 0)),
-            "rating": float(p.get("rating", 0)),
+            "subcategory": p.get("subcategory", ""),
+            "model": p.get("model", ""),
+            "condition": p.get("condition", ""),
+            "price": float(p.get("price", 0) or 0),
+            "rating": float(p.get("rating", 0) or 0),
             "image_url": p.get("image_url", ""),
             "product_url": p.get("product_url", ""),
         })
