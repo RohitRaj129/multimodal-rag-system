@@ -37,7 +37,7 @@ CSV_PATH = "data/flipkart_com-ecommerce_sample.csv"
 BACKUP_JSON_PATH = "data/flipkart_converted.json"  # saved for inspection/debugging
 BATCH_SIZE = 64           # products embedded per ingest_products() call
 BATCH_DELAY_SECONDS = 2   # pause between batches to stay under NVIDIA's rate limit
-ROW_LIMIT = 10          # set to e.g. 200 for a quick test run before doing all 20k
+ROW_LIMIT = 5           # bumped up after successful 10-product test
 
 
 # --------------------------------------------------------------------------- #
@@ -62,14 +62,15 @@ def parse_category_tree(raw_tree_string: str) -> Dict[str, Any]:
     }
 
 
-def parse_image_list(raw_image_string: str) -> str:
+def parse_image_list(raw_image_string: str) -> List[str]:
+    """Returns ALL image URLs instead of just the first."""
     if not raw_image_string or not isinstance(raw_image_string, str):
-        return ""
+        return []
     try:
         images = ast.literal_eval(raw_image_string)
-        return images[0] if images else ""
+        return images if images else []
     except (ValueError, SyntaxError, IndexError):
-        return ""
+        return []
 
 
 def parse_rating(raw_rating: Any) -> float:
@@ -186,11 +187,8 @@ def flipkart_row_to_product(row: pd.Series, generated_id: int) -> Dict[str, Any]
         "colors": [],                 # vision.py fills this on query side only
         "materials": materials,
         "style": "",                  # vision.py fills this on query side only
-        "visible_features": [],       # vision.py fills this on query side only
         "description": clean_and_truncate_description(safe_str(row.get("description"))),
-        "text_visible_in_image": [],  # vision.py fills this on query side only
         "search_keywords": search_keywords,
-        "condition": "new",
         "price": price,
         "rating": rating,
         "image_url": parse_image_list(row.get("image", "")),
