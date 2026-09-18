@@ -56,7 +56,7 @@ def ingest_products(products: List[Dict[str, Any]]) -> int:
             "model": p.get("model", ""),
             "price": float(p.get("price", 0) or 0),
             "rating": float(p.get("rating", 0) or 0),
-            "image_url": p.get("image_url", ""),
+            "image_urls": ", ".join(p.get("image_urls", [])),  # comma-separated string
             "product_url": p.get("product_url", ""),
         })
 

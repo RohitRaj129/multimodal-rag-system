@@ -1,7 +1,7 @@
 import json
 from src.ingestion import ingest_products
 
-with open("data/catalog.json") as f:
+with open("data/flipkart_converted.json") as f:
     catalog = json.load(f)
 
 count = ingest_products(catalog)
